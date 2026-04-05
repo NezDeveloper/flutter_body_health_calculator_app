@@ -1,5 +1,3 @@
-// ignore_for_file: sort_child_properties_last
-
 import 'package:flutter/material.dart';
 
 class BmiUi extends StatefulWidget {
@@ -10,6 +8,27 @@ class BmiUi extends StatefulWidget {
 }
 
 class _BmiUiState extends State<BmiUi> {
+  final TextEditingController wCtrl = TextEditingController();
+  final TextEditingController hCtrl = TextEditingController();
+  double bmiResult = 0.00;
+  String bmiResultText = 'การแปลผล';
+
+  void _clearBmiData() {
+    wCtrl.clear();
+    hCtrl.clear();
+    setState(() {
+      bmiResult = 0.00;
+      bmiResultText = 'การแปลผล';
+    });
+  }
+
+  @override
+  void dispose() {
+    wCtrl.dispose();
+    hCtrl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -24,25 +43,23 @@ class _BmiUiState extends State<BmiUi> {
           child: Center(
             child: Column(
               children: [
-                // ส่วนชื่อหน้าจอ และรูป
+                // ส่วนชื่อหน้าจอ และ รูป
                 Text(
                   'คำนวณหาค่าดัชนีมวลกาย (BMI)',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(
-                  height: 20,
-                ),
+                SizedBox(height: 20),
                 Image.asset(
                   'assets/images/bmi.png',
                   width: 80,
                   height: 80,
                   fit: BoxFit.cover,
                 ),
+                // ส่วนรับป้อนข้อมูล
                 SizedBox(height: 20),
-                // ส่วนการป้อนข้อมูล
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -50,13 +67,14 @@ class _BmiUiState extends State<BmiUi> {
                   ),
                 ),
                 TextField(
+                  controller: wCtrl,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     hintText: 'กรุณากรอกน้ำหนัก',
                     border: OutlineInputBorder(),
                   ),
                 ),
-                SizedBox(height: 20),
+                SizedBox(height: 10),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -64,20 +82,72 @@ class _BmiUiState extends State<BmiUi> {
                   ),
                 ),
                 TextField(
+                  controller: hCtrl,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     hintText: 'กรุณากรอกส่วนสูง',
                     border: OutlineInputBorder(),
                   ),
                 ),
-                SizedBox(height: 20),
+                SizedBox(height: 10),
                 // ส่วนปุ่ม
                 ElevatedButton(
-                  onPressed: () {},
-                  child: Text(
-                    'คำนวณ BMI',
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  onPressed: () {
+                    if (wCtrl.text.isEmpty || hCtrl.text.isEmpty) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('กรุณากรอกข้อมูลให้ครบ'),
+                          backgroundColor: Colors.red,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                      return;
+                    }
+
+                    final double? weight = double.tryParse(
+                      wCtrl.text.trim().replaceAll(',', '.'),
+                    );
+                    final double? heightCm = double.tryParse(
+                      hCtrl.text.trim().replaceAll(',', '.'),
+                    );
+
+                    if (weight == null ||
+                        heightCm == null ||
+                        weight <= 0 ||
+                        heightCm <= 0) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('กรุณากรอกข้อมูลให้ถูกต้อง'),
+                          backgroundColor: Colors.red,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                      return;
+                    }
+
+                    final double bmi =
+                        weight / ((heightCm / 100) * (heightCm / 100));
+                    String bmiText = '';
+
+                    if (bmi < 18.5) {
+                      bmiText = 'ผอมเกินไป';
+                    } else if (bmi <= 22.9) {
+                      bmiText = 'สมส่วน';
+                    } else if (bmi <= 24.9) {
+                      bmiText = 'ท้วม';
+                    } else if (bmi <= 29.9) {
+                      bmiText = 'โรคอ้วนระดับ 1';
+                    } else {
+                      bmiText = 'โรคอ้วนระดับ 2';
+                    }
+
+                    setState(() {
+                      bmiResult = bmi;
+                      bmiResultText = bmiText;
+                    });
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepOrange,
                     fixedSize: Size(
@@ -85,14 +155,16 @@ class _BmiUiState extends State<BmiUi> {
                       50,
                     ),
                   ),
-                ),
-                SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {},
                   child: Text(
-                    'ล้างข้อมูล',
-                    style: TextStyle(color: Colors.white),
+                    'คำนวณ BMI',
+                    style: TextStyle(
+                      color: Colors.white,
+                    ),
                   ),
+                ),
+                SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: _clearBmiData,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey,
                     fixedSize: Size(
@@ -100,11 +172,15 @@ class _BmiUiState extends State<BmiUi> {
                       50,
                     ),
                   ),
+                  child: Text(
+                    'ล้างข้อมูล',
+                    style: TextStyle(
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
-                SizedBox(
-                  height: 20,
-                ),
-                // ส่วนแสดงผล
+                //ส่วนแสดงผลข้อมูลที่ได้จากการคำนวณ
+                SizedBox(height: 20),
                 Container(
                   width: MediaQuery.of(context).size.width,
                   padding: EdgeInsets.all(20),
@@ -116,9 +192,13 @@ class _BmiUiState extends State<BmiUi> {
                     children: [
                       Text(
                         'BMI',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
-                        '0.00',
+                        bmiResult.toStringAsFixed(2),
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -126,7 +206,10 @@ class _BmiUiState extends State<BmiUi> {
                         ),
                       ),
                       Text(
-                        'การแปรผล',
+                        bmiResultText,
+                        style: TextStyle(
+                          fontSize: 16,
+                        ),
                       ),
                     ],
                   ),
